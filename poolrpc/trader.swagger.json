@@ -2195,7 +2195,27 @@
       }
     },
     "poolrpcRecoverAccountsRequest": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "full_client": {
+          "type": "boolean",
+          "description": "Recover the latest account states without interacting with the\nLightning Labs server."
+        },
+        "account_target": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Number of accounts that we are trying to recover. Used during the\nfull_client recovery process."
+        },
+        "auctioneer_key": {
+          "type": "string",
+          "description": "Auctioneer's public key. Used during the full_client recovery process."
+        },
+        "height_hint": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Initial block height. We won't try to look for any account with an expiry\nheight smaller than this value. Used during the full_client recovery\nprocess."
+        }
+      }
     },
     "poolrpcRecoverAccountsResponse": {
       "type": "object",

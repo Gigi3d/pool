@@ -870,6 +870,29 @@ enum MatchRejectReason {
 }
 
 message RecoverAccountsRequest {
+    /*
+    Recover the latest account states without interacting with the
+    Lightning Labs server.
+    */
+    bool full_client = 1;
+
+    /*
+    Number of accounts that we are trying to recover. Used during the
+    full_client recovery process.
+    */
+    uint32 account_target = 2;
+
+    /*
+    Auctioneer's public key. Used during the full_client recovery process.
+    */
+    string auctioneer_key = 3;
+
+    /*
+    Initial block height. We won't try to look for any account with an expiry
+    height smaller than this value. Used during the full_client recovery
+    process.
+    */
+    uint32 height_hint = 4;
 }
 
 message RecoverAccountsResponse {
