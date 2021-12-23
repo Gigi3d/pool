@@ -17,6 +17,24 @@ var (
 	DefaultAccountKeyWindow uint32 = 500
 )
 
+// GetAuctioneerData returns the auctioner data for a given environment.
+func GetAuctioneerData(network string) (string, uint32) {
+	var auctioneerKey string
+	var fstBlock uint32
+
+	switch network {
+	case "mainnet":
+		auctioneerKey = "028e87bdd134238f8347f845d9ecc827b843d0d1e2" +
+			"7cdcb46da704d916613f4fce"
+		fstBlock = 648168
+	case "testnet":
+		auctioneerKey = "025dea8f5c67fb3bdfffb3123d2b7045dc0a3c75e8" +
+			"22fabb39eb357480e64c4a8a"
+		fstBlock = 1834898
+	}
+	return auctioneerKey, fstBlock
+}
+
 // GenerateRecoveryKeys generates a list of key descriptors for all possible
 // keys that could be used for trader accounts, up to a hard coHashded limit.
 func GenerateRecoveryKeys(ctx context.Context, accountTarget uint32,
