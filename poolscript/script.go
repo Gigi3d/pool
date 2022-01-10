@@ -211,3 +211,20 @@ func LocateOutputScript(tx *wire.MsgTx, script []byte) (uint32, bool) {
 	}
 	return 0, false
 }
+
+// IncludesPreviousOutPoint determines whether a transaction includes a
+// given OutPoint as a txIn PreviousOutpoint.
+func IncludesPreviousOutPoint(tx *wire.MsgTx, output wire.OutPoint) bool {
+	for _, txIn := range tx.TxIn {
+		if txIn.PreviousOutPoint.Index != output.Index {
+			continue
+		}
+
+		if !bytes.Equal(txIn.PreviousOutPoint.Hash[:], output.Hash[:]) {
+			continue
+		}
+
+		return true
+	}
+	return false
+}
