@@ -68,6 +68,9 @@ const (
 	defaultExpiryRelative = 30 * 144
 
 	defaultFundingConfTarget = 6
+
+	// Account target for the account recovery process.
+	defaultAccountTarget = 10
 )
 
 var (
@@ -782,6 +785,29 @@ var recoverAccountsCommand = cli.Command{
 	All open or pending orders of any recovered account will be canceled on
 	the auctioneer's side and won't be restored in the trader's database.
 	`,
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name: "full_client",
+			Usage: "fetch the latest account state from the " +
+				"server. If false, the full process will" +
+				"run locally, but it could take hours.",
+		},
+		cli.Uint64Flag{
+			Name: "account_target",
+			Usage: "number of accounts that we are looking to " +
+				"recover.",
+			Value: defaultAccountTarget,
+		},
+		cli.StringFlag{
+			Name:  "auctioneer_key",
+			Usage: "Auctioneer's public key.",
+			Value: "test",
+		},
+		cli.Uint64Flag{
+			Name:  "height_hint",
+			Usage: "initial block height.",
+		},
+	},
 	Action: recoverAccounts,
 }
 
@@ -794,7 +820,10 @@ func recoverAccounts(ctx *cli.Context) error {
 
 	resp, err := client.RecoverAccounts(
 		context.Background(), &poolrpc.RecoverAccountsRequest{
-			FullClient: false,
+			FullClient:    ctx.Bool("full_client"),
+			AccountTarget: uint32(ctx.Uint64("account_target")),
+			AuctioneerKey: ctx.String("auctioneer_key"),
+			HeightHint:    uint32(ctx.Uint64("height_hint")),
 		},
 	)
 	if err != nil {
