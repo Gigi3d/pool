@@ -2,7 +2,9 @@ package account
 
 import (
 	"context"
+	"encoding/hex"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/lightninglabs/lndclient"
 	"github.com/lightninglabs/pool/poolscript"
 	"github.com/lightningnetwork/lnd/keychain"
@@ -33,6 +35,105 @@ func GetAuctioneerData(network string) (string, uint32) {
 		fstBlock = 1834898
 	}
 	return auctioneerKey, fstBlock
+}
+
+// DecodeAndParseKey decode and parse a btc public key.
+func DecodeAndParseKey(key string) (*btcec.PublicKey, error) {
+	kStr, err := hex.DecodeString(key)
+	if err != nil {
+		return nil, err
+	}
+	k, err := btcec.ParsePubKey(kStr, btcec.S256())
+	if err != nil {
+		return nil, err
+	}
+	return k, nil
+}
+
+// RecoveryConfig contains all of the required dependencies for carrying out the
+// recovery process duties.
+type RecoveryConfig struct {
+	// Network to run recovery on.
+	Network string
+
+	// Number of accounts that we are trying to find.
+	AccountTarget uint32
+
+	// FirstBlock block marks the initial height for our search.
+	FirstBlock uint32
+
+	// LastBlock block marks the final height for our search.
+	LastBlock uint32
+
+	// Transactions
+	Transactions []lndclient.Transaction
+
+	// Signer
+	Signer lndclient.SignerClient
+
+	// Wallet
+	Wallet lndclient.WalletKitClient
+
+	/*
+		Auctioneer data
+	*/
+
+	// Initial value for the batch key.
+	InitialBatchKey *btcec.PublicKey
+
+	// Auctioneer public key.
+	AuctioneerPubKey *btcec.PublicKey
+}
+
+// RecoverAccounts tries to recover valid accounts using the given configuration.
+func RecoverAccounts(ctx context.Context, cfg RecoveryConfig) (
+	[]*Account, error) {
+
+	accounts, err := recoverInitalState(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	accounts, err = updateAccountStates(cfg, accounts)
+	if err != nil {
+		return nil, err
+	}
+
+	return accounts, nil
+}
+
+// recoverInitalState finds accounts in their initial state (creation).
+func recoverInitalState(ctx context.Context, cfg RecoveryConfig) (
+	[]*Account, error) {
+
+	log.Debugf(
+		"Recovering initial states for %d accounts...",
+		cfg.AccountTarget,
+	)
+
+	var accounts []*Account
+
+	// TODO (positiveblue): recover initial state
+
+	log.Debugf(
+		"Found initial tx for %d/%d accounts", len(accounts),
+		cfg.AccountTarget,
+	)
+
+	return accounts, nil
+}
+
+// updateAccountStates tries to update the states for every provided
+// account up to their latest state by following the on chain
+// modification footprints.
+func updateAccountStates(cfg RecoveryConfig, accounts []*Account) (
+	[]*Account, error) {
+
+	recoveredAccounts := make([]*Account, 0, len(accounts))
+
+	// TODO (positiveblue): update account states
+
+	return recoveredAccounts, nil
 }
 
 // GenerateRecoveryKeys generates a list of key descriptors for all possible

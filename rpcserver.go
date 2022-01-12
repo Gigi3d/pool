@@ -1074,6 +1074,75 @@ func (s *rpcServer) serverAssistedRecovery(ctx context.Context, target uint32) (
 	return recoveredAccounts, nil
 }
 
+// fullClientRecovery executes the account recovery process.
+func (s *rpcServer) fullClientRecovery(ctx context.Context,
+	req *poolrpc.RecoverAccountsRequest) ([]*account.Account, error) {
+
+	txs, err := s.lndServices.Client.ListTransactions(ctx, 0, -1)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get txs from lnd: %v", err)
+	}
+
+	chainInfo, err := s.lndServices.Client.GetInfo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"unable to get chainInfo from lnd: %v",
+			err,
+		)
+	}
+
+	// Look up for expiry height of up to 1 year from the last known block.
+	lastBlock := chainInfo.BlockHeight + 144*365
+
+	// Reverse transacctions order so we have older ones at the beginning.
+	for i, j := 0, len(txs)-1; i < j; i, j = i+1, j-1 {
+		txs[i], txs[j] = txs[j], txs[i]
+	}
+
+	key, fstBlock := account.GetAuctioneerData(s.server.cfg.Network)
+	if req.AuctioneerKey == "" {
+		req.AuctioneerKey = key
+	}
+	if req.HeightHint == 0 {
+		req.HeightHint = fstBlock
+	}
+
+	if req.AuctioneerKey == "" || req.HeightHint == 0 {
+		return nil, fmt.Errorf("unable to get auctioner data")
+	}
+
+	auctioneerPubKey, err := account.DecodeAndParseKey(req.AuctioneerKey)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode an parse key: %v", err)
+	}
+	batchKey, err := account.DecodeAndParseKey(
+		"02824d0cbac65e01712124c50ff2cc74ce22851d7b444c1bf2ae66afefb" +
+			"8eaf27f",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode an parse key: %v", err)
+	}
+
+	cfg := account.RecoveryConfig{
+		Network:          s.server.cfg.Network,
+		AccountTarget:    req.AccountTarget,
+		FirstBlock:       req.HeightHint,
+		LastBlock:        lastBlock,
+		Transactions:     txs,
+		Signer:           s.lndServices.Signer,
+		Wallet:           s.lndServices.WalletKit,
+		InitialBatchKey:  batchKey,
+		AuctioneerPubKey: auctioneerPubKey,
+	}
+
+	recoveredAccounts, err := account.RecoverAccounts(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("error performing recovery: %v", err)
+	}
+
+	return recoveredAccounts, nil
+}
+
 func (s *rpcServer) RecoverAccounts(ctx context.Context,
 	req *poolrpc.RecoverAccountsRequest) (*poolrpc.RecoverAccountsResponse,
 	error) {
@@ -1095,9 +1164,11 @@ func (s *rpcServer) RecoverAccounts(ctx context.Context,
 
 	if !req.FullClient {
 		recoveredAccounts, err = s.serverAssistedRecovery(ctx, target)
-		if err != nil {
-			return nil, err
-		}
+	} else {
+		recoveredAccounts, err = s.fullClientRecovery(ctx, req)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	// Store the recovered accounts now and start watching them. If anything
